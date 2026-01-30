@@ -1,0 +1,88 @@
+<!-- Basic Card - Back Template -->
+<div class="card-container">
+  <div class="card-header">
+    <span class="tag-badge">{{Tags}}</span>
+    <span class="card-type">Answer</span>
+  </div>
+  <div class="card-body">
+    <div class="question">
+      {{Front}}
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="answer" id="answer-content">
+      {{Back}}
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  formatCodeInElement(document.querySelector('.question'));
+  formatAnswer(document.getElementById('answer-content'));
+});
+
+function formatCodeInElement(element) {
+  if (!element) return;
+  let html = element.innerHTML;
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  html = html.replace(/```(\w+)?\n?([\s\S]*?)```/g, function(match, lang, code) {
+    return formatCodeBlock(code.trim(), lang || 'python');
+  });
+  element.innerHTML = html;
+}
+
+function formatAnswer(element) {
+  if (!element) return;
+  let html = element.innerHTML;
+
+  // Format inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Detect and style complexity mentions
+  html = html.replace(/O\(([^)]+)\)/g, '<code class="complexity-badge time-complexity">O($1)</code>');
+
+  // Format code blocks
+  html = html.replace(/```(\w+)?\n?([\s\S]*?)```/g, function(match, lang, code) {
+    return formatCodeBlock(code.trim(), lang || 'python');
+  });
+
+  // Style approach mentions
+  if (html.includes('Approach:') || html.includes('approach:')) {
+    html = html.replace(/(Approach:|approach:)\s*(.+)/gi, '<div class="approach"><span class="approach-label">Approach</span>$2</div>');
+  }
+
+  element.innerHTML = html;
+}
+
+function formatCodeBlock(code, lang) {
+  const highlighted = highlightPython(code);
+  return `<div class="code-block" data-lang="${lang}"><code><pre>${highlighted}</pre></code></div>`;
+}
+
+function highlightPython(code) {
+  const keywords = ['def', 'class', 'if', 'elif', 'else', 'for', 'while', 'return', 'import', 'from', 'as', 'try', 'except', 'finally', 'with', 'lambda', 'yield', 'raise', 'pass', 'break', 'continue', 'in', 'not', 'and', 'or', 'is', 'None', 'True', 'False', 'self', 'global', 'nonlocal'];
+  const builtins = ['len', 'range', 'print', 'int', 'str', 'list', 'dict', 'set', 'tuple', 'max', 'min', 'sum', 'abs', 'sorted', 'enumerate', 'zip', 'map', 'filter', 'any', 'all', 'isinstance', 'type', 'hasattr', 'getattr', 'setattr'];
+
+  code = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  code = code.replace(/(#.*$)/gm, '<span class="comment">$1</span>');
+  code = code.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '<span class="string">$1</span>');
+  code = code.replace(/\b(\d+\.?\d*)\b/g, '<span class="number">$1</span>');
+
+  keywords.forEach(kw => {
+    const regex = new RegExp('\\b(' + kw + ')\\b', 'g');
+    code = code.replace(regex, '<span class="keyword">$1</span>');
+  });
+
+  builtins.forEach(fn => {
+    const regex = new RegExp('\\b(' + fn + ')\\b', 'g');
+    code = code.replace(regex, '<span class="builtin">$1</span>');
+  });
+
+  code = code.replace(/\b(def)\s+(\w+)/g, '<span class="keyword">$1</span> <span class="function">$2</span>');
+  code = code.replace(/\b(class)\s+(\w+)/g, '<span class="keyword">$1</span> <span class="class-name">$2</span>');
+
+  return code;
+}
+</script>

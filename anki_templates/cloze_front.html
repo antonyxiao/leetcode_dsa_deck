@@ -1,0 +1,113 @@
+<!-- Cloze Card - Front Template -->
+<div class="card-container">
+  <div class="card-header">
+    <span class="tag-badge">{{Tags}}</span>
+    <span class="card-type">Fill in the blank</span>
+  </div>
+  <div class="card-body">
+    <div class="question" id="cloze-content">
+      {{cloze:Front}}
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const content = document.getElementById('cloze-content');
+  if (!content) return;
+
+  let html = content.innerHTML;
+
+  // Convert <br> tags to newlines for code detection
+  const hasCode = html.includes('def ') || html.includes('class ') || html.includes('for ') ||
+                  html.includes('while ') || html.includes('if ') || html.includes('return ');
+
+  if (hasCode) {
+    // This is a code implementation card
+    html = formatImplementationCard(html);
+  } else {
+    // Regular card
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  }
+
+  content.innerHTML = html;
+});
+
+function formatImplementationCard(html) {
+  // Clean up and format as code block
+  let code = html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/Complete\s+/i, '');
+
+  // Extract title from first line if it contains a function/class name
+  let title = 'Implementation';
+  const titleMatch = code.match(/^([^:]+):/);
+  if (titleMatch) {
+    title = titleMatch[1].trim();
+    code = code.substring(titleMatch[0].length).trim();
+  }
+
+  // Highlight the code
+  const highlighted = highlightPythonWithCloze(code);
+
+  return `
+    <div class="implementation">
+      <div class="implementation-header">
+        <span class="implementation-title">${title}</span>
+      </div>
+      <div class="implementation-body">
+        <div class="code-block" data-lang="python">
+          <code><pre>${highlighted}</pre></code>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function highlightPythonWithCloze(code) {
+  const keywords = ['def', 'class', 'if', 'elif', 'else', 'for', 'while', 'return', 'import', 'from', 'as', 'try', 'except', 'finally', 'with', 'lambda', 'yield', 'raise', 'pass', 'break', 'continue', 'in', 'not', 'and', 'or', 'is', 'None', 'True', 'False', 'self', 'global', 'nonlocal'];
+  const builtins = ['len', 'range', 'print', 'int', 'str', 'list', 'dict', 'set', 'tuple', 'max', 'min', 'sum', 'abs', 'sorted', 'enumerate', 'zip', 'map', 'filter', 'any', 'all', 'isinstance', 'type', 'hasattr', 'getattr', 'setattr', 'heapq', 'deque', 'Counter', 'defaultdict', 'heappush', 'heappop', 'bisect_left', 'bisect_right'];
+
+  // Preserve cloze deletions
+  const clozePattern = /(\[\.\.\.\]|<span class="cloze">\[(?:\.\.\.|[^\]]*)\]<\/span>)/g;
+  const clozes = [];
+  code = code.replace(clozePattern, function(match) {
+    clozes.push(match);
+    return `__CLOZE_${clozes.length - 1}__`;
+  });
+
+  // Escape HTML (but not already escaped)
+  code = code.replace(/&(?!amp;|lt;|gt;)/g, '&amp;')
+             .replace(/<(?!span|\/span)/g, '&lt;')
+             .replace(/(?<!span)>/g, '&gt;');
+
+  // Comments
+  code = code.replace(/(#[^_].*$)/gm, '<span class="comment">$1</span>');
+
+  // Strings (careful not to match inside cloze markers)
+  code = code.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '<span class="string">$1</span>');
+
+  // Numbers
+  code = code.replace(/\b(\d+\.?\d*)\b/g, '<span class="number">$1</span>');
+
+  // Keywords
+  keywords.forEach(kw => {
+    const regex = new RegExp('\\b(' + kw + ')\\b', 'g');
+    code = code.replace(regex, '<span class="keyword">$1</span>');
+  });
+
+  // Built-ins
+  builtins.forEach(fn => {
+    const regex = new RegExp('\\b(' + fn + ')\\b', 'g');
+    code = code.replace(regex, '<span class="builtin">$1</span>');
+  });
+
+  // Restore cloze deletions
+  clozes.forEach((cloze, i) => {
+    code = code.replace(`__CLOZE_${i}__`, cloze);
+  });
+
+  return code;
+}
+</script>
