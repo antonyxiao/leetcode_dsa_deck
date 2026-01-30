@@ -1,78 +1,9 @@
-<!-- Basic Card - Front Template -->
-<div class="card-container">
-  <div class="card-header">
-    <span class="tag-badge">{{Tags}}</span>
-    <span class="card-type">Question</span>
+<div class="container">
+  <div class="header">
+    <span class="tag">{{Tags}}</span>
+    <span class="type">Question</span>
   </div>
-  <div class="card-body">
-    <div class="question">
-      {{Front}}
-    </div>
+  <div class="content">
+    <p class="question">{{Front}}</p>
   </div>
 </div>
-
-<script>
-// Auto-detect and format code blocks
-document.addEventListener('DOMContentLoaded', function() {
-  formatCodeInElement(document.querySelector('.question'));
-});
-
-function formatCodeInElement(element) {
-  if (!element) return;
-
-  let html = element.innerHTML;
-
-  // Format inline code (backticks)
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  // Format code blocks with syntax highlighting
-  html = html.replace(/```(\w+)?\n?([\s\S]*?)```/g, function(match, lang, code) {
-    return formatCodeBlock(code.trim(), lang || 'python');
-  });
-
-  element.innerHTML = html;
-}
-
-function formatCodeBlock(code, lang) {
-  const highlighted = highlightPython(code);
-  return `<div class="code-block" data-lang="${lang}"><code><pre>${highlighted}</pre></code></div>`;
-}
-
-function highlightPython(code) {
-  // Keywords
-  const keywords = ['def', 'class', 'if', 'elif', 'else', 'for', 'while', 'return', 'import', 'from', 'as', 'try', 'except', 'finally', 'with', 'lambda', 'yield', 'raise', 'pass', 'break', 'continue', 'in', 'not', 'and', 'or', 'is', 'None', 'True', 'False', 'self', 'global', 'nonlocal'];
-  const builtins = ['len', 'range', 'print', 'int', 'str', 'list', 'dict', 'set', 'tuple', 'max', 'min', 'sum', 'abs', 'sorted', 'enumerate', 'zip', 'map', 'filter', 'any', 'all', 'isinstance', 'type', 'hasattr', 'getattr', 'setattr'];
-
-  // Escape HTML
-  code = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-  // Comments
-  code = code.replace(/(#.*$)/gm, '<span class="comment">$1</span>');
-
-  // Strings
-  code = code.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '<span class="string">$1</span>');
-
-  // Numbers
-  code = code.replace(/\b(\d+\.?\d*)\b/g, '<span class="number">$1</span>');
-
-  // Keywords
-  keywords.forEach(kw => {
-    const regex = new RegExp('\\b(' + kw + ')\\b', 'g');
-    code = code.replace(regex, '<span class="keyword">$1</span>');
-  });
-
-  // Built-ins
-  builtins.forEach(fn => {
-    const regex = new RegExp('\\b(' + fn + ')\\b', 'g');
-    code = code.replace(regex, '<span class="builtin">$1</span>');
-  });
-
-  // Function definitions
-  code = code.replace(/\b(def)\s+(\w+)/g, '<span class="keyword">$1</span> <span class="function">$2</span>');
-
-  // Class definitions
-  code = code.replace(/\b(class)\s+(\w+)/g, '<span class="keyword">$1</span> <span class="class-name">$2</span>');
-
-  return code;
-}
-</script>

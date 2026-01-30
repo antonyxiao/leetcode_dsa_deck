@@ -1,459 +1,361 @@
 #!/usr/bin/env python3
 """
-Generate a beautifully styled Anki deck from the LeetCode DSA flashcards.
-
-This script creates an .apkg file with:
-- Modern dark theme styling
-- Syntax-highlighted code blocks
-- Organized subdecks by topic
-- Both Basic and Cloze note types
-
-Usage: python generate_anki_deck.py
-Output: LeetCode_DSA_Deck.apkg
+Generate a clean, flat-styled Anki deck from the LeetCode DSA flashcards.
 """
 
 import csv
 import os
 import hashlib
-import random
+import re
 
-# Try to import genanki, provide instructions if not available
 try:
     import genanki
 except ImportError:
-    print("Error: genanki is required. Install it with:")
-    print("  pip install genanki")
+    print("Install genanki: pip install genanki")
     exit(1)
 
 # ============================================================================
-# STYLING
+# CLEAN FLAT STYLING
 # ============================================================================
 
 CARD_CSS = """
-/* ==========================================
-   LeetCode DSA Deck - Modern Card Styling
-   ========================================== */
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-:root {
-  --bg-primary: #1a1b26;
-  --bg-secondary: #24283b;
-  --bg-card: #1f2335;
-  --text-primary: #c0caf5;
-  --text-secondary: #a9b1d6;
-  --text-muted: #565f89;
-  --accent-blue: #7aa2f7;
-  --accent-purple: #bb9af7;
-  --accent-cyan: #7dcfff;
-  --accent-green: #9ece6a;
-  --accent-orange: #ff9e64;
-  --accent-red: #f7768e;
-  --accent-yellow: #e0af68;
-  --border-color: #3b4261;
-  --code-bg: #1a1b26;
-  --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  --radius: 12px;
-  --radius-sm: 8px;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap');
 
 .card {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 18px;
-  line-height: 1.7;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  padding: 30px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  color: #1a1a2e;
+  background: #f8f9fa;
+  padding: 24px;
   text-align: left;
 }
 
-.card-container {
-  max-width: 800px;
+.container {
+  max-width: 680px;
   margin: 0 auto;
-  background: var(--bg-card);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border-color);
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
   overflow: hidden;
 }
 
-.card-header {
-  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
-  padding: 14px 24px;
+/* Header */
+.header {
+  background: #f1f5f9;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e5e7eb;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
 }
 
-.tag-badge {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 12px;
+.tag {
+  font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  backdrop-filter: blur(10px);
-}
-
-.card-type {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 12px;
-  font-weight: 500;
+  color: #6366f1;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.card-body {
-  padding: 28px;
+.type {
+  font-size: 11px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Content */
+.content {
+  padding: 24px;
 }
 
 .question {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 500;
-  color: var(--text-primary);
-  line-height: 1.6;
+  color: #111827;
+  margin: 0;
+}
+
+.hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 20px 0;
 }
 
 .answer {
-  font-size: 17px;
-  color: var(--text-secondary);
-  padding: 20px 24px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-sm);
-  border-left: 4px solid var(--accent-green);
-  margin-top: 20px;
-  line-height: 1.7;
+  background: #f0fdf4;
+  border-left: 3px solid #22c55e;
+  padding: 16px 20px;
+  border-radius: 0 6px 6px 0;
+  color: #166534;
+  font-size: 16px;
 }
 
-.divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border-color), transparent);
-  margin: 24px 0;
-}
-
-/* Cloze styling */
+/* Cloze */
 .cloze {
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-weight: 700;
-  font-size: 1.05em;
+  color: #6366f1;
+  font-weight: 600;
 }
 
-/* Code styling */
+/* Code */
 code {
-  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
-  background: var(--bg-secondary);
-  color: var(--accent-cyan);
-  padding: 3px 8px;
-  border-radius: 5px;
-  font-size: 0.88em;
-  border: 1px solid var(--border-color);
+  font-family: 'Fira Code', monospace;
+  font-size: 0.9em;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #0f172a;
 }
 
 .code-block {
-  background: var(--code-bg);
-  border-radius: var(--radius-sm);
-  padding: 20px;
-  margin: 18px 0;
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 16px 20px;
+  border-radius: 6px;
+  margin: 16px 0;
   overflow-x: auto;
-  border: 1px solid var(--border-color);
-  position: relative;
-}
-
-.code-block::before {
-  content: 'PYTHON';
-  position: absolute;
-  top: 10px;
-  right: 14px;
-  font-size: 10px;
-  color: var(--text-muted);
-  letter-spacing: 1.5px;
-  font-weight: 600;
-}
-
-.code-block code {
-  background: transparent;
-  border: none;
-  padding: 0;
-  font-size: 14px;
-  line-height: 1.65;
-  color: var(--text-primary);
-  display: block;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-/* Syntax highlighting */
-.kw { color: #bb9af7; font-weight: 500; }
-.fn { color: #7aa2f7; }
-.str { color: #9ece6a; }
-.num { color: #ff9e64; }
-.cmt { color: #565f89; font-style: italic; }
-.op { color: #7dcfff; }
-.bi { color: #7dcfff; }
-.cls { color: #e0af68; }
-
-/* Implementation card */
-.impl {
-  border: 2px solid var(--accent-green);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin: 18px 0;
-}
-
-.impl-header {
-  background: linear-gradient(135deg, rgba(158, 206, 106, 0.15), rgba(125, 207, 255, 0.15));
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.impl-title {
-  color: var(--accent-green);
-  font-weight: 600;
+  font-family: 'Fira Code', monospace;
   font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+  line-height: 1.5;
 }
 
-.impl-body .code-block {
-  margin: 0;
-  border: none;
-  border-radius: 0;
+.code-block .cloze {
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.2);
+  padding: 1px 4px;
+  border-radius: 3px;
 }
 
-/* Complexity badge */
+/* Syntax */
+.kw { color: #c084fc; }
+.fn { color: #60a5fa; }
+.str { color: #4ade80; }
+.num { color: #fb923c; }
+.cmt { color: #64748b; font-style: italic; }
+.bi { color: #22d3ee; }
+
+/* Complexity */
 .complexity {
   display: inline-block;
-  padding: 4px 10px;
-  border-radius: 5px;
+  font-family: 'Fira Code', monospace;
   font-size: 13px;
-  font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
-  background: rgba(122, 162, 247, 0.15);
-  color: var(--accent-blue);
-  border: 1px solid var(--accent-blue);
-}
-
-/* Night mode */
-.nightMode .card {
-  --bg-primary: #0d1117;
-  --bg-secondary: #161b22;
-  --bg-card: #0d1117;
+  font-weight: 500;
+  color: #6366f1;
+  background: #eef2ff;
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 /* Mobile */
 @media (max-width: 600px) {
-  .card { font-size: 16px; padding: 15px; }
-  .card-body { padding: 20px; }
-  .question { font-size: 17px; }
-  .code-block code { font-size: 13px; }
+  .card { padding: 12px; font-size: 15px; }
+  .content { padding: 16px; }
+  .question { font-size: 16px; }
+  .code-block { font-size: 12px; padding: 12px; }
 }
+
+/* Night mode */
+.nightMode .card { background: #0f172a; color: #e2e8f0; }
+.nightMode .container { background: #1e293b; border-color: #334155; }
+.nightMode .header { background: #334155; border-color: #475569; }
+.nightMode .question { color: #f1f5f9; }
+.nightMode .answer { background: #064e3b; border-color: #10b981; color: #d1fae5; }
+.nightMode code { background: #334155; color: #e2e8f0; }
+.nightMode .hr { border-color: #475569; }
 """
 
-# ============================================================================
-# TEMPLATES
-# ============================================================================
+BASIC_FRONT = """<div class="container">
+  <div class="header">
+    <span class="tag">{{Tags}}</span>
+    <span class="type">Question</span>
+  </div>
+  <div class="content">
+    <p class="question">{{Front}}</p>
+  </div>
+</div>"""
 
-BASIC_FRONT = """
-<div class="card-container">
-  <div class="card-header">
-    <span class="tag-badge">{{Tags}}</span>
-    <span class="card-type">Question</span>
+BASIC_BACK = """<div class="container">
+  <div class="header">
+    <span class="tag">{{Tags}}</span>
+    <span class="type">Answer</span>
   </div>
-  <div class="card-body">
-    <div class="question">{{Front}}</div>
-  </div>
-</div>
-"""
-
-BASIC_BACK = """
-<div class="card-container">
-  <div class="card-header">
-    <span class="tag-badge">{{Tags}}</span>
-    <span class="card-type">Answer</span>
-  </div>
-  <div class="card-body">
-    <div class="question">{{Front}}</div>
-    <div class="divider"></div>
+  <div class="content">
+    <p class="question">{{Front}}</p>
+    <hr class="hr">
     <div class="answer">{{Back}}</div>
   </div>
-</div>
-"""
+</div>"""
 
-CLOZE_FRONT = """
-<div class="card-container">
-  <div class="card-header">
-    <span class="tag-badge">{{Tags}}</span>
-    <span class="card-type">Fill in the blank</span>
+CLOZE_TEMPLATE = """<div class="container">
+  <div class="header">
+    <span class="tag">{{Tags}}</span>
+    <span class="type">Fill in</span>
   </div>
-  <div class="card-body">
+  <div class="content">
     <div class="question">{{cloze:Front}}</div>
   </div>
-</div>
-"""
-
-CLOZE_BACK = """
-<div class="card-container">
-  <div class="card-header">
-    <span class="tag-badge">{{Tags}}</span>
-    <span class="card-type">Answer</span>
-  </div>
-  <div class="card-body">
-    <div class="question">{{cloze:Front}}</div>
-  </div>
-</div>
-"""
+</div>"""
 
 # ============================================================================
 # MODELS
 # ============================================================================
 
-def generate_model_id(name):
-    """Generate a stable model ID from name."""
+def model_id(name):
     return int(hashlib.md5(name.encode()).hexdigest()[:8], 16)
 
 basic_model = genanki.Model(
-    generate_model_id('LeetCode DSA Basic v3'),
-    'LeetCode DSA Basic',
-    fields=[
-        {'name': 'Front'},
-        {'name': 'Back'},
-        {'name': 'Tags'},
-    ],
-    templates=[
-        {
-            'name': 'Card 1',
-            'qfmt': BASIC_FRONT,
-            'afmt': BASIC_BACK,
-        },
-    ],
+    model_id('LeetCode-Basic-v5'),
+    'LeetCode Basic',
+    fields=[{'name': 'Front'}, {'name': 'Back'}, {'name': 'Tags'}],
+    templates=[{'name': 'Card', 'qfmt': BASIC_FRONT, 'afmt': BASIC_BACK}],
     css=CARD_CSS,
 )
 
 cloze_model = genanki.Model(
-    generate_model_id('LeetCode DSA Cloze v3'),
-    'LeetCode DSA Cloze',
-    fields=[
-        {'name': 'Front'},
-        {'name': 'Back'},
-        {'name': 'Tags'},
-    ],
-    templates=[
-        {
-            'name': 'Cloze',
-            'qfmt': CLOZE_FRONT,
-            'afmt': CLOZE_BACK,
-        },
-    ],
+    model_id('LeetCode-Cloze-v5'),
+    'LeetCode Cloze',
+    fields=[{'name': 'Front'}, {'name': 'Back'}, {'name': 'Tags'}],
+    templates=[{'name': 'Cloze', 'qfmt': CLOZE_TEMPLATE, 'afmt': CLOZE_TEMPLATE}],
     css=CARD_CSS,
     model_type=genanki.Model.CLOZE,
 )
 
 # ============================================================================
-# DECK CONFIGURATION
+# TOPIC CONFIG - Properly ordered
 # ============================================================================
 
-TOPIC_CONFIG = {
-    '01_arrays_hashing': ('1. Arrays & Hashing', '🔢'),
-    '02_two_pointers': ('2. Two Pointers', '👆'),
-    '03_stack': ('3. Stack', '📚'),
-    '04_binary_search': ('4. Binary Search', '🔍'),
-    '05_sliding_window': ('5. Sliding Window', '🪟'),
-    '06_linked_list': ('6. Linked List', '🔗'),
-    '07_trees': ('7. Trees', '🌳'),
-    '08_tries': ('8. Tries', '🔤'),
-    '09_backtracking': ('9. Backtracking', '↩️'),
-    '10_heap_priority_queue': ('10. Heap / Priority Queue', '⬆️'),
-    '11_graphs': ('11. Graphs', '🕸️'),
-    '12_1d_dp': ('12. 1D Dynamic Programming', '📊'),
-    '13_intervals': ('13. Intervals', '📏'),
-    '14_greedy': ('14. Greedy', '🤑'),
-    '15_advanced_graphs': ('15. Advanced Graphs', '🗺️'),
-    '16_2d_dp': ('16. 2D Dynamic Programming', '📈'),
-    '17_bit_manipulation': ('17. Bit Manipulation', '🔢'),
-    '18_math_geometry': ('18. Math & Geometry', '📐'),
+TOPICS = [
+    ('01_arrays_hashing', '01 Arrays & Hashing'),
+    ('02_two_pointers', '02 Two Pointers'),
+    ('03_stack', '03 Stack'),
+    ('04_binary_search', '04 Binary Search'),
+    ('05_sliding_window', '05 Sliding Window'),
+    ('06_linked_list', '06 Linked List'),
+    ('07_trees', '07 Trees'),
+    ('08_tries', '08 Tries'),
+    ('09_backtracking', '09 Backtracking'),
+    ('10_heap_priority_queue', '10 Heap & Priority Queue'),
+    ('11_graphs', '11 Graphs'),
+    ('12_1d_dp', '12 Dynamic Programming 1D'),
+    ('13_intervals', '13 Intervals'),
+    ('14_greedy', '14 Greedy'),
+    ('15_advanced_graphs', '15 Advanced Graphs'),
+    ('16_2d_dp', '16 Dynamic Programming 2D'),
+    ('17_bit_manipulation', '17 Bit Manipulation'),
+    ('18_math_geometry', '18 Math & Geometry'),
+]
+
+# Card type ordering (logical learning sequence)
+TYPE_ORDER = {
+    'concept': 0,
+    'python': 1,
+    'pattern': 2,
+    'code': 3,
+    'implementation': 4,
+    'problem': 5,
+    'complexity': 6,
+    'insight': 7,
+    'edge_case': 8,
 }
 
+def get_card_sort_key(card):
+    """Sort cards within a topic by type, then alphabetically."""
+    tags = card.get('Tags', '')
+
+    # Extract subtype from tag (e.g., "arrays_hashing::concept" -> "concept")
+    if '::' in tags:
+        subtype = tags.split('::')[1].lower()
+    else:
+        subtype = 'code'
+
+    # Check for implementation in content
+    front = card.get('Front', '')
+    if 'Complete ' in front and '<br>' in front:
+        subtype = 'implementation'
+
+    order = TYPE_ORDER.get(subtype, 5)
+    return (order, front[:50])
+
 # ============================================================================
-# HELPERS
+# FORMATTING
 # ============================================================================
 
-def highlight_code(text):
-    """Add syntax highlighting classes to Python code."""
+def highlight_python(code):
+    """Simple syntax highlighting."""
     keywords = ['def', 'class', 'if', 'elif', 'else', 'for', 'while', 'return',
-                'import', 'from', 'as', 'try', 'except', 'finally', 'with',
-                'lambda', 'yield', 'raise', 'pass', 'break', 'continue', 'in',
-                'not', 'and', 'or', 'is', 'None', 'True', 'False', 'self']
-    builtins = ['len', 'range', 'print', 'int', 'str', 'list', 'dict', 'set',
-                'tuple', 'max', 'min', 'sum', 'abs', 'sorted', 'enumerate',
-                'zip', 'map', 'filter', 'any', 'all', 'heapq', 'deque',
-                'Counter', 'defaultdict', 'heappush', 'heappop', 'bisect_left']
+                'import', 'from', 'as', 'try', 'except', 'with', 'lambda',
+                'yield', 'raise', 'pass', 'break', 'continue', 'in', 'not',
+                'and', 'or', 'is', 'None', 'True', 'False', 'self']
+    builtins = ['len', 'range', 'int', 'str', 'list', 'dict', 'set', 'tuple',
+                'max', 'min', 'sum', 'abs', 'sorted', 'enumerate', 'zip',
+                'map', 'filter', 'any', 'all', 'heapq', 'deque', 'Counter',
+                'defaultdict', 'heappush', 'heappop', 'bisect_left']
 
-    import re
+    # Escape HTML first
+    code = code.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
-    # Simple highlighting for display
+    # Comments
+    code = re.sub(r'(#[^\n]*)', r'<span class="cmt">\1</span>', code)
+
+    # Strings
+    code = re.sub(r'("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\')', r'<span class="str">\1</span>', code)
+
+    # Numbers
+    code = re.sub(r'\b(\d+\.?\d*)\b', r'<span class="num">\1</span>', code)
+
+    # Keywords
     for kw in keywords:
-        text = re.sub(rf'\b({kw})\b', r'<span class="kw">\1</span>', text)
+        code = re.sub(rf'\b({kw})\b', r'<span class="kw">\1</span>', code)
+
+    # Builtins
     for bi in builtins:
-        text = re.sub(rf'\b({bi})\b', r'<span class="bi">\1</span>', text)
+        code = re.sub(rf'\b({bi})\b', r'<span class="bi">\1</span>', code)
 
-    return text
+    return code
 
-
-def format_card_content(text, is_implementation=False):
-    """Format card content with code highlighting."""
+def format_content(text, is_code_card=False):
+    """Format card content."""
     if not text:
         return text
 
-    # Check if this is an implementation card (contains code)
-    if '<br>' in text and ('def ' in text or 'class ' in text):
-        is_implementation = True
+    # Check if implementation card
+    if '<br>' in text and ('def ' in text or 'class ' in text or 'Complete' in text):
+        is_code_card = True
 
-    if is_implementation:
-        # Extract title
-        title = "Implementation"
-        if ':' in text.split('<br>')[0]:
-            parts = text.split(':', 1)
-            title = parts[0].replace('Complete ', '').strip()
-            text = parts[1].strip()
-
-        # Convert <br> to newlines and highlight
+    if is_code_card:
+        # Convert to code block
         code = text.replace('<br>', '\n')
-        code = highlight_code(code)
 
-        return f'''<div class="impl">
-            <div class="impl-header"><span class="impl-title">{title}</span></div>
-            <div class="impl-body"><div class="code-block"><code>{code}</code></div></div>
-        </div>'''
+        # Remove "Complete X:" prefix for cleaner display
+        if code.startswith('Complete '):
+            code = re.sub(r'^Complete [^:]+:\s*\n?', '', code)
 
-    # Regular text - just wrap inline code
-    import re
+        highlighted = highlight_python(code)
+        return f'<div class="code-block">{highlighted}</div>'
+
+    # Regular text - format inline code and complexity
     text = re.sub(r'`([^`]+)`', r'<code>\1</code>', text)
-
-    # Highlight O() complexity
-    text = re.sub(r'O\(([^)]+)\)', r'<span class="complexity">O(\1)</span>', text)
+    text = re.sub(r'\bO\(([^)]+)\)', r'<span class="complexity">O(\1)</span>', text)
 
     return text
 
+def format_tag(tag):
+    """Format tag for display."""
+    if '::' in tag:
+        topic, subtype = tag.split('::')
+    else:
+        topic = tag
+        subtype = ''
 
-def generate_deck_id(name):
-    """Generate a stable deck ID from name."""
-    return int(hashlib.md5(name.encode()).hexdigest()[:12], 16)
+    # Clean up topic name
+    topic = topic.replace('_', ' ').title()
+    topic = topic.replace('Dp ', 'DP ')
 
-
-def read_csv_file(filepath):
-    """Read a CSV file and return list of cards."""
-    cards = []
-    with open(filepath, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            cards.append(row)
-    return cards
-
+    if subtype:
+        subtype = subtype.replace('_', ' ').title()
+        return f"{topic} · {subtype}"
+    return topic
 
 # ============================================================================
 # MAIN
@@ -463,62 +365,63 @@ def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     topics_dir = os.path.join(script_dir, 'topics')
 
-    # Create main deck
     main_deck_name = 'LeetCode DSA'
-    main_deck = genanki.Deck(
-        generate_deck_id(main_deck_name),
-        main_deck_name
-    )
-
-    # Create subdecks and collect all cards
-    all_decks = [main_deck]
+    all_decks = []
     total_cards = 0
 
-    for filename in sorted(os.listdir(topics_dir)):
-        if not filename.endswith('.csv'):
+    print("=" * 50)
+    print("  LeetCode DSA Anki Deck Generator")
+    print("  Clean Flat Design")
+    print("=" * 50)
+    print()
+
+    for topic_file, topic_name in TOPICS:
+        filepath = os.path.join(topics_dir, f'{topic_file}.csv')
+        if not os.path.exists(filepath):
             continue
 
-        topic_key = filename.replace('.csv', '')
-        if topic_key not in TOPIC_CONFIG:
-            continue
-
-        topic_name, emoji = TOPIC_CONFIG[topic_key]
+        # Create subdeck
         subdeck_name = f"{main_deck_name}::{topic_name}"
-
         subdeck = genanki.Deck(
-            generate_deck_id(subdeck_name),
+            int(hashlib.md5(subdeck_name.encode()).hexdigest()[:12], 16),
             subdeck_name
         )
 
-        filepath = os.path.join(topics_dir, filename)
-        cards = read_csv_file(filepath)
+        # Read and sort cards
+        cards = []
+        with open(filepath, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            cards = list(reader)
 
+        # Sort cards by type for logical learning order
+        cards.sort(key=get_card_sort_key)
+
+        # Add cards to deck
         for card in cards:
             card_type = card.get('Type', 'Basic')
             front = card.get('Front', '')
             back = card.get('Back', '')
-            tags = card.get('Tags', topic_key)
+            tags = card.get('Tags', topic_file)
 
-            # Format display tag
-            display_tag = tags.replace('_', ' ').replace('::', ' → ').title()
+            display_tag = format_tag(tags)
 
-            # Check if implementation card
-            is_impl = 'implementation' in tags.lower() or 'Complete ' in front
+            # Check if code card
+            is_code = ('implementation' in tags.lower() or
+                      ('<br>' in front and ('def ' in front or 'class ' in front)))
 
-            # Format content
-            front_formatted = format_card_content(front, is_impl)
+            front_fmt = format_content(front, is_code)
 
             if card_type == 'Cloze':
                 note = genanki.Note(
                     model=cloze_model,
-                    fields=[front_formatted, back, display_tag],
+                    fields=[front_fmt, back, display_tag],
                     tags=[tags.replace('::', '_')]
                 )
             else:
-                back_formatted = format_card_content(back)
+                back_fmt = format_content(back, False)
                 note = genanki.Note(
                     model=basic_model,
-                    fields=[front_formatted, back_formatted, display_tag],
+                    fields=[front_fmt, back_fmt, display_tag],
                     tags=[tags.replace('::', '_')]
                 )
 
@@ -526,23 +429,18 @@ def main():
             total_cards += 1
 
         all_decks.append(subdeck)
-        print(f"  {emoji} {topic_name}: {len(cards)} cards")
+        print(f"  {topic_name}: {len(cards)} cards")
 
-    # Create package
+    # Create and save package
     package = genanki.Package(all_decks)
-
     output_path = os.path.join(script_dir, 'LeetCode_DSA_Deck.apkg')
     package.write_to_file(output_path)
 
-    print(f"\n✅ Successfully created: {output_path}")
-    print(f"📚 Total cards: {total_cards}")
-    print(f"📁 Subdecks: {len(all_decks) - 1}")
-    print("\n📖 Import this file into Anki to start studying!")
-
+    print()
+    print(f"✓ Created: {output_path}")
+    print(f"✓ Total: {total_cards} cards in {len(all_decks)} subdecks")
+    print()
+    print("Import into Anki to start studying!")
 
 if __name__ == '__main__':
-    print("=" * 50)
-    print("🎴 LeetCode DSA Anki Deck Generator")
-    print("=" * 50)
-    print()
     main()
