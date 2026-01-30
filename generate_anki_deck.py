@@ -193,7 +193,7 @@ def model_id(name):
     return int(hashlib.md5(name.encode()).hexdigest()[:8], 16)
 
 basic_model = genanki.Model(
-    model_id('LeetCode-Basic-v8'),
+    model_id('LeetCode-Basic-v9'),
     'LeetCode Basic',
     fields=[
         {'name': 'Front'},
@@ -207,7 +207,7 @@ basic_model = genanki.Model(
 )
 
 cloze_model = genanki.Model(
-    model_id('LeetCode-Cloze-v8'),
+    model_id('LeetCode-Cloze-v9'),
     'LeetCode Cloze',
     fields=[
         {'name': 'Front'},
@@ -261,29 +261,119 @@ def get_card_sort_key(card):
     return (TYPE_ORDER.get(subtype, 5), front[:50])
 
 # ============================================================================
-# CODE FORMATTING - Fixed
+# CODE FORMATTING
 # ============================================================================
 
 def is_code_card(text):
     """Check if text contains code that should be in a code block."""
-    if '<br>' not in text:
-        return False
-    # Check for code patterns
-    code_patterns = ['def ', 'class ', 'for ', 'while ', 'if ', 'return ', '{{c1::', '{{c2::']
-    return any(p in text for p in code_patterns)
+    # Has <br> tags with code
+    if '<br>' in text:
+        code_patterns = ['def ', 'class ', 'for ', 'while ', 'if ', 'return ', '{{c1::', '{{c2::']
+        if any(p in text for p in code_patterns):
+            return True
+
+    # Single-line code with semicolons (like "while x: stmt1; stmt2; stmt3")
+    # Must have code keywords AND semicolons AND cloze markers
+    if '; ' in text and '{{c' in text:
+        code_keywords = ['while ', 'for ', 'if ', 'def ', 'return ', ' = ', '(', ')']
+        if any(kw in text for kw in code_keywords):
+            return True
+
+    return False
+
+
+def expand_semicolon_code(text):
+    """Convert semicolon-separated code into multi-line code."""
+    # Extract title if present (e.g., "Binary search: ...")
+    title = None
+    if ': ' in text and not text.startswith('{{'):
+        colon_pos = text.find(': ')
+        potential_title = text[:colon_pos]
+        # Check if it looks like a title (not code)
+        if not any(kw in potential_title for kw in ['while', 'for', 'if', 'def', '=']):
+            title = potential_title
+            text = text[colon_pos + 2:]
+
+    # Split by semicolons but be careful with semicolons inside strings/cloze
+    # Simple approach: split and then handle indentation
+    parts = []
+    current = ""
+    in_cloze = 0
+    in_string = None
+
+    i = 0
+    while i < len(text):
+        char = text[i]
+
+        # Track cloze markers
+        if text[i:i+2] == '{{':
+            in_cloze += 1
+        elif text[i:i+2] == '}}':
+            in_cloze = max(0, in_cloze - 1)
+
+        # Track strings
+        if char in '"\'':
+            if in_string == char:
+                in_string = None
+            elif in_string is None:
+                in_string = char
+
+        # Split on semicolon followed by space (outside strings)
+        if char == ';' and i + 1 < len(text) and text[i + 1] == ' ' and in_string is None:
+            parts.append(current.strip())
+            current = ""
+            i += 2  # Skip "; "
+            continue
+
+        current += char
+        i += 1
+
+    if current.strip():
+        parts.append(current.strip())
+
+    # Now format with proper indentation
+    lines = []
+    indent_level = 0
+
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+
+        # Decrease indent for else/elif
+        if part.startswith('else:') or part.startswith('elif '):
+            indent_level = max(0, indent_level - 1)
+
+        # Add the line with current indentation
+        lines.append('    ' * indent_level + part)
+
+        # Increase indent after colons (control structures)
+        if part.endswith(':'):
+            indent_level += 1
+        # Decrease indent after return/break/continue (unless in nested)
+        elif part.startswith('return ') or part == 'break' or part == 'continue':
+            indent_level = max(0, indent_level - 1)
+
+    return title, '\n'.join(lines)
 
 
 def format_code_block(text):
-    """Convert <br> delimited code to proper code block."""
-    # Convert <br> to newlines
-    code = text.replace('<br>', '\n')
-
-    # Extract title if present (e.g., "Complete Binary Search:")
+    """Convert code text to proper code block."""
     title = None
-    title_match = re.match(r'^(Complete [^:]+):\s*', code)
-    if title_match:
-        title = title_match.group(1)
-        code = code[title_match.end():]
+
+    # Check if it's <br> delimited or semicolon delimited
+    if '<br>' in text:
+        # Convert <br> to newlines
+        code = text.replace('<br>', '\n')
+
+        # Extract title if present
+        title_match = re.match(r'^(Complete [^:]+):\s*', code)
+        if title_match:
+            title = title_match.group(1)
+            code = code[title_match.end():]
+    else:
+        # Semicolon-separated single line
+        title, code = expand_semicolon_code(text)
 
     # Clean up the code
     lines = code.split('\n')
@@ -305,24 +395,33 @@ def format_code_block(text):
     if min_indent > 0 and min_indent < float('inf'):
         lines = [line[min_indent:] if len(line) >= min_indent else line for line in lines]
 
-    # Join and escape HTML (but preserve cloze markers)
     code = '\n'.join(lines)
 
-    # Escape HTML entities but preserve cloze
-    # First, protect cloze markers
-    cloze_pattern = r'(\{\{c\d+::.*?\}\})'
-    clozes = re.findall(cloze_pattern, code)
-    for i, c in enumerate(clozes):
-        code = code.replace(c, f'__CLOZE_{i}__')
+    # Escape HTML including inside cloze markers
+    def escape_html(text):
+        text = text.replace('&', '&amp;')
+        text = text.replace('<', '&lt;')
+        text = text.replace('>', '&gt;')
+        return text
 
-    # Escape HTML
-    code = code.replace('&', '&amp;')
-    code = code.replace('<', '&lt;')
-    code = code.replace('>', '&gt;')
+    # Find and process cloze markers, escaping HTML inside them
+    cloze_pattern = r'\{\{c(\d+)::(.*?)\}\}'
 
-    # Restore cloze markers
-    for i, c in enumerate(clozes):
-        code = code.replace(f'__CLOZE_{i}__', c)
+    def escape_cloze(match):
+        num = match.group(1)
+        content = escape_html(match.group(2))
+        return f'{{{{c{num}::{content}}}}}'
+
+    # First escape cloze contents
+    code = re.sub(cloze_pattern, escape_cloze, code)
+
+    # Then escape the rest (non-cloze parts)
+    # Split by cloze markers, escape non-cloze parts, rejoin
+    parts = re.split(r'(\{\{c\d+::.*?\}\})', code)
+    for i, part in enumerate(parts):
+        if not re.match(r'\{\{c\d+::.*?\}\}', part):
+            parts[i] = escape_html(part)
+    code = ''.join(parts)
 
     # Build HTML
     html = ''
