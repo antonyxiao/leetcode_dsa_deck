@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate Anki deck with proper sorting and clean grayscale design.
+Generate Anki deck with proper sorting, grayscale design, and correct code formatting.
 """
 
 import csv
@@ -15,7 +15,7 @@ except ImportError:
     exit(1)
 
 # ============================================================================
-# SIMPLE GRAYSCALE DESIGN (Dark Mode Optimized)
+# SIMPLE GRAYSCALE DESIGN (Dark Mode)
 # ============================================================================
 
 CARD_CSS = """
@@ -86,7 +86,6 @@ CARD_CSS = """
   line-height: 1.6;
 }
 
-/* Cloze */
 .cloze {
   color: #fff;
   font-weight: 600;
@@ -94,12 +93,12 @@ CARD_CSS = """
 
 /* Inline code */
 code {
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
-  font-size: 0.88em;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
   background: #1a1a1a;
-  color: #d0d0d0;
+  color: #ccc;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 3px;
   border: 1px solid #333;
 }
 
@@ -114,65 +113,39 @@ pre {
 }
 
 pre code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
   background: none;
   border: none;
   padding: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #d4d4d4;
+  color: #d0d0d0;
   white-space: pre;
   display: block;
 }
 
-/* Syntax highlighting - grayscale with subtle tints */
-.kw { color: #c9c9c9; font-weight: 500; }
-.str { color: #a8a8a8; }
-.num { color: #b8b8b8; }
-.cmt { color: #666; font-style: italic; }
-.bi { color: #d0d0d0; }
-
-/* Complexity */
-.complexity {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  color: #aaa;
+.code-title {
+  color: #777;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
 }
 
-/* Light mode fallback */
+/* Light mode */
 .card:not(.nightMode) {
   background: #f5f5f5;
   color: #222;
 }
-.card:not(.nightMode) .container {
-  background: #fff;
-  border-color: #ddd;
-}
-.card:not(.nightMode) .header {
-  border-color: #ddd;
-}
-.card:not(.nightMode) .question {
-  color: #111;
-}
-.card:not(.nightMode) .answer {
-  color: #333;
-}
-.card:not(.nightMode) code {
-  background: #f0f0f0;
-  color: #333;
-  border-color: #ddd;
-}
-.card:not(.nightMode) pre {
-  background: #f8f8f8;
-  border-color: #ddd;
-}
-.card:not(.nightMode) pre code {
-  color: #333;
-}
-.card:not(.nightMode) .hr {
-  border-color: #ddd;
-}
+.card:not(.nightMode) .container { background: #fff; border-color: #ddd; }
+.card:not(.nightMode) .header { border-color: #ddd; }
+.card:not(.nightMode) .question { color: #111; }
+.card:not(.nightMode) .answer { color: #333; }
+.card:not(.nightMode) code { background: #f0f0f0; color: #333; border-color: #ddd; }
+.card:not(.nightMode) pre { background: #f8f8f8; border-color: #ddd; }
+.card:not(.nightMode) pre code { color: #333; }
+.card:not(.nightMode) .hr { border-color: #ddd; }
 
-/* Mobile */
 @media (max-width: 600px) {
   .card { padding: 12px; font-size: 15px; }
   .content { padding: 16px; }
@@ -213,45 +186,43 @@ CLOZE_TEMPLATE = """<div class="container">
 </div>"""
 
 # ============================================================================
-# MODELS WITH SORT FIELD
+# MODELS
 # ============================================================================
 
 def model_id(name):
     return int(hashlib.md5(name.encode()).hexdigest()[:8], 16)
 
-# Basic model with Sort field
 basic_model = genanki.Model(
-    model_id('LeetCode-Basic-v7'),
+    model_id('LeetCode-Basic-v8'),
     'LeetCode Basic',
     fields=[
         {'name': 'Front'},
         {'name': 'Back'},
         {'name': 'Tags'},
-        {'name': 'Sort'},  # Sort field for ordering
+        {'name': 'Sort'},
     ],
     templates=[{'name': 'Card', 'qfmt': BASIC_FRONT, 'afmt': BASIC_BACK}],
     css=CARD_CSS,
-    sort_field_index=3,  # Use Sort field for ordering
+    sort_field_index=3,
 )
 
-# Cloze model with Sort field
 cloze_model = genanki.Model(
-    model_id('LeetCode-Cloze-v7'),
+    model_id('LeetCode-Cloze-v8'),
     'LeetCode Cloze',
     fields=[
         {'name': 'Front'},
         {'name': 'Back'},
         {'name': 'Tags'},
-        {'name': 'Sort'},  # Sort field for ordering
+        {'name': 'Sort'},
     ],
     templates=[{'name': 'Cloze', 'qfmt': CLOZE_TEMPLATE, 'afmt': CLOZE_TEMPLATE}],
     css=CARD_CSS,
     model_type=genanki.Model.CLOZE,
-    sort_field_index=3,  # Use Sort field for ordering
+    sort_field_index=3,
 )
 
 # ============================================================================
-# TOPICS - Ordered
+# TOPICS
 # ============================================================================
 
 TOPICS = [
@@ -275,131 +246,113 @@ TOPICS = [
     ('18_math_geometry', '18 Math & Geometry'),
 ]
 
-# Card type ordering
 TYPE_ORDER = {
-    'concept': 0,
-    'python': 1,
-    'pattern': 2,
-    'code': 3,
-    'implementation': 4,
-    'problem': 5,
-    'complexity': 6,
-    'insight': 7,
-    'edge_case': 8,
+    'concept': 0, 'python': 1, 'pattern': 2, 'code': 3,
+    'implementation': 4, 'problem': 5, 'complexity': 6,
+    'insight': 7, 'edge_case': 8,
 }
 
 def get_card_sort_key(card):
-    """Sort cards within a topic by type."""
     tags = card.get('Tags', '')
     front = card.get('Front', '')
-
-    if '::' in tags:
-        subtype = tags.split('::')[1].lower()
-    else:
-        subtype = 'code'
-
-    if 'Complete ' in front and '<br>' in front:
+    subtype = tags.split('::')[1].lower() if '::' in tags else 'code'
+    if 'Complete ' in front:
         subtype = 'implementation'
-
-    order = TYPE_ORDER.get(subtype, 5)
-    return (order, front[:50])
+    return (TYPE_ORDER.get(subtype, 5), front[:50])
 
 # ============================================================================
-# CODE FORMATTING
+# CODE FORMATTING - Fixed
 # ============================================================================
 
-def format_code_block(code):
-    """Format code as a proper code block with indentation."""
+def is_code_card(text):
+    """Check if text contains code that should be in a code block."""
+    if '<br>' not in text:
+        return False
+    # Check for code patterns
+    code_patterns = ['def ', 'class ', 'for ', 'while ', 'if ', 'return ', '{{c1::', '{{c2::']
+    return any(p in text for p in code_patterns)
+
+
+def format_code_block(text):
+    """Convert <br> delimited code to proper code block."""
+    # Convert <br> to newlines
+    code = text.replace('<br>', '\n')
+
+    # Extract title if present (e.g., "Complete Binary Search:")
+    title = None
+    title_match = re.match(r'^(Complete [^:]+):\s*', code)
+    if title_match:
+        title = title_match.group(1)
+        code = code[title_match.end():]
+
     # Clean up the code
-    lines = code.strip().split('\n')
+    lines = code.split('\n')
 
-    # Remove common leading whitespace
-    if lines:
-        # Find minimum indentation (excluding empty lines)
-        min_indent = float('inf')
-        for line in lines:
-            if line.strip():
-                indent = len(line) - len(line.lstrip())
-                min_indent = min(min_indent, indent)
+    # Remove empty leading/trailing lines
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    while lines and not lines[-1].strip():
+        lines.pop()
 
-        if min_indent < float('inf'):
-            lines = [line[min_indent:] if len(line) >= min_indent else line for line in lines]
+    # Find minimum indentation
+    min_indent = float('inf')
+    for line in lines:
+        if line.strip():
+            indent = len(line) - len(line.lstrip())
+            min_indent = min(min_indent, indent)
 
-    formatted_code = '\n'.join(lines)
+    # Remove common indentation
+    if min_indent > 0 and min_indent < float('inf'):
+        lines = [line[min_indent:] if len(line) >= min_indent else line for line in lines]
 
-    # Simple syntax highlighting
-    keywords = ['def', 'class', 'if', 'elif', 'else', 'for', 'while', 'return',
-                'import', 'from', 'as', 'try', 'except', 'with', 'lambda',
-                'yield', 'raise', 'pass', 'break', 'continue', 'in', 'not',
-                'and', 'or', 'is', 'None', 'True', 'False', 'self']
-    builtins = ['len', 'range', 'int', 'str', 'list', 'dict', 'set', 'tuple',
-                'max', 'min', 'sum', 'abs', 'sorted', 'enumerate', 'zip',
-                'map', 'filter', 'any', 'all', 'heapq', 'deque', 'Counter',
-                'defaultdict', 'heappush', 'heappop', 'bisect_left']
+    # Join and escape HTML (but preserve cloze markers)
+    code = '\n'.join(lines)
+
+    # Escape HTML entities but preserve cloze
+    # First, protect cloze markers
+    cloze_pattern = r'(\{\{c\d+::.*?\}\})'
+    clozes = re.findall(cloze_pattern, code)
+    for i, c in enumerate(clozes):
+        code = code.replace(c, f'__CLOZE_{i}__')
 
     # Escape HTML
-    formatted_code = formatted_code.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    code = code.replace('&', '&amp;')
+    code = code.replace('<', '&lt;')
+    code = code.replace('>', '&gt;')
 
-    # Comments
-    formatted_code = re.sub(r'(#[^\n]*)', r'<span class="cmt">\1</span>', formatted_code)
+    # Restore cloze markers
+    for i, c in enumerate(clozes):
+        code = code.replace(f'__CLOZE_{i}__', c)
 
-    # Strings
-    formatted_code = re.sub(r'("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\')', r'<span class="str">\1</span>', formatted_code)
+    # Build HTML
+    html = ''
+    if title:
+        html += f'<div class="code-title">{title}</div>'
+    html += f'<pre><code>{code}</code></pre>'
 
-    # Numbers
-    formatted_code = re.sub(r'\b(\d+\.?\d*)\b', r'<span class="num">\1</span>', formatted_code)
-
-    # Keywords
-    for kw in keywords:
-        formatted_code = re.sub(rf'\b({kw})\b', r'<span class="kw">\1</span>', formatted_code)
-
-    # Builtins
-    for bi in builtins:
-        formatted_code = re.sub(rf'\b({bi})\b', r'<span class="bi">\1</span>', formatted_code)
-
-    return f'<pre><code>{formatted_code}</code></pre>'
+    return html
 
 
 def format_content(text):
-    """Format card content, converting code to proper blocks."""
+    """Format card content."""
     if not text:
         return text
 
-    # Check if this is a code implementation card (has <br> and code patterns)
-    if '<br>' in text and ('def ' in text or 'class ' in text or '{{c1::' in text):
-        # This is a code card - convert to proper code block
+    # Check if this is a code card
+    if is_code_card(text):
+        return format_code_block(text)
 
-        # Convert <br> to newlines
-        code = text.replace('<br>', '\n')
-
-        # Check if there's a title prefix like "Complete X:"
-        title_match = re.match(r'^(Complete [^:]+):\s*\n?', code)
-        title = ''
-        if title_match:
-            title = title_match.group(1)
-            code = code[title_match.end():]
-
-        # Format as code block
-        formatted = format_code_block(code)
-
-        if title:
-            return f'<div style="color:#888;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">{title}</div>{formatted}'
-        return formatted
-
-    # Regular text - format inline code and complexity
+    # Regular text - format inline code
     text = re.sub(r'`([^`]+)`', r'<code>\1</code>', text)
-    text = re.sub(r'\bO\(([^)]+)\)', r'<span class="complexity">O(\1)</span>', text)
 
     return text
 
 
 def format_tag(tag):
-    """Format tag for display."""
     if '::' in tag:
         topic, subtype = tag.split('::')
     else:
-        topic = tag
-        subtype = ''
+        topic, subtype = tag, ''
 
     topic = topic.replace('_', ' ').title()
     topic = topic.replace('1d', '1D').replace('2d', '2D')
@@ -407,7 +360,7 @@ def format_tag(tag):
 
     if subtype:
         subtype = subtype.replace('_', ' ').title()
-        return f"{topic} › {subtype}"
+        return f"{topic} · {subtype}"
     return topic
 
 
@@ -419,14 +372,11 @@ def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     topics_dir = os.path.join(script_dir, 'topics')
 
-    main_deck_name = 'LeetCode DSA'
     all_decks = []
     total_cards = 0
-    global_sort_index = 0
 
     print("=" * 50)
-    print("  LeetCode DSA Anki Deck Generator")
-    print("  Grayscale Design with Sort Field")
+    print("  LeetCode DSA Deck Generator")
     print("=" * 50)
     print()
 
@@ -435,22 +385,16 @@ def main():
         if not os.path.exists(filepath):
             continue
 
-        subdeck_name = f"{main_deck_name}::{topic_name}"
         subdeck = genanki.Deck(
-            int(hashlib.md5(subdeck_name.encode()).hexdigest()[:12], 16),
-            subdeck_name
+            int(hashlib.md5(f'LeetCode DSA::{topic_name}'.encode()).hexdigest()[:12], 16),
+            f'LeetCode DSA::{topic_name}'
         )
 
-        # Read and sort cards
-        cards = []
         with open(filepath, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            cards = list(reader)
+            cards = list(csv.DictReader(f))
 
-        # Sort cards by type
         cards.sort(key=get_card_sort_key)
 
-        # Add cards with sort index
         for card_idx, card in enumerate(cards):
             card_type = card.get('Type', 'Basic')
             front = card.get('Front', '')
@@ -460,10 +404,7 @@ def main():
             display_tag = format_tag(tags)
             front_fmt = format_content(front)
             back_fmt = format_content(back) if back else ''
-
-            # Create sort value: topic_index * 10000 + card_index
             sort_value = str(topic_idx * 10000 + card_idx).zfill(6)
-            global_sort_index += 1
 
             if card_type == 'Cloze':
                 note = genanki.Note(
@@ -484,16 +425,13 @@ def main():
         all_decks.append(subdeck)
         print(f"  {topic_name}: {len(cards)} cards")
 
-    # Save
     package = genanki.Package(all_decks)
     output_path = os.path.join(script_dir, 'LeetCode_DSA_Deck.apkg')
     package.write_to_file(output_path)
 
     print()
-    print(f"✓ Created: {output_path}")
-    print(f"✓ Total: {total_cards} cards in {len(all_decks)} subdecks")
-    print(f"✓ Cards have sort field for proper ordering")
-    print()
+    print(f"Created: {output_path}")
+    print(f"Total: {total_cards} cards")
 
 if __name__ == '__main__':
     main()
