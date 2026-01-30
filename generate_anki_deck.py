@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate a clean, flat-styled Anki deck from the LeetCode DSA flashcards.
+Generate Anki deck with proper sorting and clean grayscale design.
 """
 
 import csv
@@ -15,36 +15,33 @@ except ImportError:
     exit(1)
 
 # ============================================================================
-# CLEAN FLAT STYLING
+# SIMPLE GRAYSCALE DESIGN (Dark Mode Optimized)
 # ============================================================================
 
 CARD_CSS = """
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 .card {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1.6;
-  color: #1a1a2e;
-  background: #f8f9fa;
-  padding: 24px;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  padding: 20px;
   text-align: left;
 }
 
 .container {
-  max-width: 680px;
+  max-width: 700px;
   margin: 0 auto;
-  background: #ffffff;
+  background: #242424;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  overflow: hidden;
+  border: 1px solid #333;
 }
 
-/* Header */
 .header {
-  background: #f1f5f9;
-  padding: 12px 20px;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 10px 16px;
+  border-bottom: 1px solid #333;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -52,136 +49,154 @@ CARD_CSS = """
 
 .tag {
   font-size: 11px;
-  font-weight: 600;
-  color: #6366f1;
+  font-weight: 500;
+  color: #888;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .type {
   font-size: 11px;
-  color: #9ca3af;
+  color: #666;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-/* Content */
 .content {
-  padding: 24px;
+  padding: 20px;
 }
 
 .question {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 500;
-  color: #111827;
+  color: #f0f0f0;
   margin: 0;
+  line-height: 1.7;
 }
 
 .hr {
   border: none;
-  border-top: 1px solid #e5e7eb;
-  margin: 20px 0;
+  border-top: 1px solid #333;
+  margin: 16px 0;
 }
 
 .answer {
-  background: #f0fdf4;
-  border-left: 3px solid #22c55e;
-  padding: 16px 20px;
-  border-radius: 0 6px 6px 0;
-  color: #166534;
+  color: #c0c0c0;
   font-size: 16px;
+  line-height: 1.6;
 }
 
 /* Cloze */
 .cloze {
-  color: #6366f1;
+  color: #fff;
   font-weight: 600;
 }
 
-/* Code */
+/* Inline code */
 code {
-  font-family: 'Fira Code', monospace;
-  font-size: 0.9em;
-  background: #f1f5f9;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 0.88em;
+  background: #1a1a1a;
+  color: #d0d0d0;
   padding: 2px 6px;
   border-radius: 4px;
-  color: #0f172a;
+  border: 1px solid #333;
 }
 
-.code-block {
-  background: #1e293b;
-  color: #e2e8f0;
-  padding: 16px 20px;
+/* Code blocks */
+pre {
+  background: #0d0d0d;
+  border: 1px solid #333;
   border-radius: 6px;
-  margin: 16px 0;
+  padding: 16px;
+  margin: 12px 0;
   overflow-x: auto;
-  font-family: 'Fira Code', monospace;
+}
+
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
   font-size: 13px;
   line-height: 1.5;
+  color: #d4d4d4;
+  white-space: pre;
+  display: block;
 }
 
-.code-block .cloze {
-  color: #a5b4fc;
-  background: rgba(99, 102, 241, 0.2);
-  padding: 1px 4px;
-  border-radius: 3px;
-}
-
-/* Syntax */
-.kw { color: #c084fc; }
-.fn { color: #60a5fa; }
-.str { color: #4ade80; }
-.num { color: #fb923c; }
-.cmt { color: #64748b; font-style: italic; }
-.bi { color: #22d3ee; }
+/* Syntax highlighting - grayscale with subtle tints */
+.kw { color: #c9c9c9; font-weight: 500; }
+.str { color: #a8a8a8; }
+.num { color: #b8b8b8; }
+.cmt { color: #666; font-style: italic; }
+.bi { color: #d0d0d0; }
 
 /* Complexity */
 .complexity {
-  display: inline-block;
-  font-family: 'Fira Code', monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
-  font-weight: 500;
-  color: #6366f1;
-  background: #eef2ff;
-  padding: 2px 8px;
-  border-radius: 4px;
+  color: #aaa;
+}
+
+/* Light mode fallback */
+.card:not(.nightMode) {
+  background: #f5f5f5;
+  color: #222;
+}
+.card:not(.nightMode) .container {
+  background: #fff;
+  border-color: #ddd;
+}
+.card:not(.nightMode) .header {
+  border-color: #ddd;
+}
+.card:not(.nightMode) .question {
+  color: #111;
+}
+.card:not(.nightMode) .answer {
+  color: #333;
+}
+.card:not(.nightMode) code {
+  background: #f0f0f0;
+  color: #333;
+  border-color: #ddd;
+}
+.card:not(.nightMode) pre {
+  background: #f8f8f8;
+  border-color: #ddd;
+}
+.card:not(.nightMode) pre code {
+  color: #333;
+}
+.card:not(.nightMode) .hr {
+  border-color: #ddd;
 }
 
 /* Mobile */
 @media (max-width: 600px) {
   .card { padding: 12px; font-size: 15px; }
   .content { padding: 16px; }
-  .question { font-size: 16px; }
-  .code-block { font-size: 12px; padding: 12px; }
+  pre code { font-size: 12px; }
 }
-
-/* Night mode */
-.nightMode .card { background: #0f172a; color: #e2e8f0; }
-.nightMode .container { background: #1e293b; border-color: #334155; }
-.nightMode .header { background: #334155; border-color: #475569; }
-.nightMode .question { color: #f1f5f9; }
-.nightMode .answer { background: #064e3b; border-color: #10b981; color: #d1fae5; }
-.nightMode code { background: #334155; color: #e2e8f0; }
-.nightMode .hr { border-color: #475569; }
 """
 
 BASIC_FRONT = """<div class="container">
   <div class="header">
     <span class="tag">{{Tags}}</span>
-    <span class="type">Question</span>
+    <span class="type">Q</span>
   </div>
   <div class="content">
-    <p class="question">{{Front}}</p>
+    <div class="question">{{Front}}</div>
   </div>
 </div>"""
 
 BASIC_BACK = """<div class="container">
   <div class="header">
     <span class="tag">{{Tags}}</span>
-    <span class="type">Answer</span>
+    <span class="type">A</span>
   </div>
   <div class="content">
-    <p class="question">{{Front}}</p>
+    <div class="question">{{Front}}</div>
     <hr class="hr">
     <div class="answer">{{Back}}</div>
   </div>
@@ -190,7 +205,7 @@ BASIC_BACK = """<div class="container">
 CLOZE_TEMPLATE = """<div class="container">
   <div class="header">
     <span class="tag">{{Tags}}</span>
-    <span class="type">Fill in</span>
+    <span class="type">Fill</span>
   </div>
   <div class="content">
     <div class="question">{{cloze:Front}}</div>
@@ -198,31 +213,45 @@ CLOZE_TEMPLATE = """<div class="container">
 </div>"""
 
 # ============================================================================
-# MODELS
+# MODELS WITH SORT FIELD
 # ============================================================================
 
 def model_id(name):
     return int(hashlib.md5(name.encode()).hexdigest()[:8], 16)
 
+# Basic model with Sort field
 basic_model = genanki.Model(
-    model_id('LeetCode-Basic-v5'),
+    model_id('LeetCode-Basic-v7'),
     'LeetCode Basic',
-    fields=[{'name': 'Front'}, {'name': 'Back'}, {'name': 'Tags'}],
+    fields=[
+        {'name': 'Front'},
+        {'name': 'Back'},
+        {'name': 'Tags'},
+        {'name': 'Sort'},  # Sort field for ordering
+    ],
     templates=[{'name': 'Card', 'qfmt': BASIC_FRONT, 'afmt': BASIC_BACK}],
     css=CARD_CSS,
+    sort_field_index=3,  # Use Sort field for ordering
 )
 
+# Cloze model with Sort field
 cloze_model = genanki.Model(
-    model_id('LeetCode-Cloze-v5'),
+    model_id('LeetCode-Cloze-v7'),
     'LeetCode Cloze',
-    fields=[{'name': 'Front'}, {'name': 'Back'}, {'name': 'Tags'}],
+    fields=[
+        {'name': 'Front'},
+        {'name': 'Back'},
+        {'name': 'Tags'},
+        {'name': 'Sort'},  # Sort field for ordering
+    ],
     templates=[{'name': 'Cloze', 'qfmt': CLOZE_TEMPLATE, 'afmt': CLOZE_TEMPLATE}],
     css=CARD_CSS,
     model_type=genanki.Model.CLOZE,
+    sort_field_index=3,  # Use Sort field for ordering
 )
 
 # ============================================================================
-# TOPIC CONFIG - Properly ordered
+# TOPICS - Ordered
 # ============================================================================
 
 TOPICS = [
@@ -237,16 +266,16 @@ TOPICS = [
     ('09_backtracking', '09 Backtracking'),
     ('10_heap_priority_queue', '10 Heap & Priority Queue'),
     ('11_graphs', '11 Graphs'),
-    ('12_1d_dp', '12 Dynamic Programming 1D'),
+    ('12_1d_dp', '12 DP 1D'),
     ('13_intervals', '13 Intervals'),
     ('14_greedy', '14 Greedy'),
     ('15_advanced_graphs', '15 Advanced Graphs'),
-    ('16_2d_dp', '16 Dynamic Programming 2D'),
+    ('16_2d_dp', '16 DP 2D'),
     ('17_bit_manipulation', '17 Bit Manipulation'),
     ('18_math_geometry', '18 Math & Geometry'),
 ]
 
-# Card type ordering (logical learning sequence)
+# Card type ordering
 TYPE_ORDER = {
     'concept': 0,
     'python': 1,
@@ -260,17 +289,15 @@ TYPE_ORDER = {
 }
 
 def get_card_sort_key(card):
-    """Sort cards within a topic by type, then alphabetically."""
+    """Sort cards within a topic by type."""
     tags = card.get('Tags', '')
+    front = card.get('Front', '')
 
-    # Extract subtype from tag (e.g., "arrays_hashing::concept" -> "concept")
     if '::' in tags:
         subtype = tags.split('::')[1].lower()
     else:
         subtype = 'code'
 
-    # Check for implementation in content
-    front = card.get('Front', '')
     if 'Complete ' in front and '<br>' in front:
         subtype = 'implementation'
 
@@ -278,11 +305,29 @@ def get_card_sort_key(card):
     return (order, front[:50])
 
 # ============================================================================
-# FORMATTING
+# CODE FORMATTING
 # ============================================================================
 
-def highlight_python(code):
-    """Simple syntax highlighting."""
+def format_code_block(code):
+    """Format code as a proper code block with indentation."""
+    # Clean up the code
+    lines = code.strip().split('\n')
+
+    # Remove common leading whitespace
+    if lines:
+        # Find minimum indentation (excluding empty lines)
+        min_indent = float('inf')
+        for line in lines:
+            if line.strip():
+                indent = len(line) - len(line.lstrip())
+                min_indent = min(min_indent, indent)
+
+        if min_indent < float('inf'):
+            lines = [line[min_indent:] if len(line) >= min_indent else line for line in lines]
+
+    formatted_code = '\n'.join(lines)
+
+    # Simple syntax highlighting
     keywords = ['def', 'class', 'if', 'elif', 'else', 'for', 'while', 'return',
                 'import', 'from', 'as', 'try', 'except', 'with', 'lambda',
                 'yield', 'raise', 'pass', 'break', 'continue', 'in', 'not',
@@ -292,53 +337,61 @@ def highlight_python(code):
                 'map', 'filter', 'any', 'all', 'heapq', 'deque', 'Counter',
                 'defaultdict', 'heappush', 'heappop', 'bisect_left']
 
-    # Escape HTML first
-    code = code.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    # Escape HTML
+    formatted_code = formatted_code.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
     # Comments
-    code = re.sub(r'(#[^\n]*)', r'<span class="cmt">\1</span>', code)
+    formatted_code = re.sub(r'(#[^\n]*)', r'<span class="cmt">\1</span>', formatted_code)
 
     # Strings
-    code = re.sub(r'("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\')', r'<span class="str">\1</span>', code)
+    formatted_code = re.sub(r'("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\')', r'<span class="str">\1</span>', formatted_code)
 
     # Numbers
-    code = re.sub(r'\b(\d+\.?\d*)\b', r'<span class="num">\1</span>', code)
+    formatted_code = re.sub(r'\b(\d+\.?\d*)\b', r'<span class="num">\1</span>', formatted_code)
 
     # Keywords
     for kw in keywords:
-        code = re.sub(rf'\b({kw})\b', r'<span class="kw">\1</span>', code)
+        formatted_code = re.sub(rf'\b({kw})\b', r'<span class="kw">\1</span>', formatted_code)
 
     # Builtins
     for bi in builtins:
-        code = re.sub(rf'\b({bi})\b', r'<span class="bi">\1</span>', code)
+        formatted_code = re.sub(rf'\b({bi})\b', r'<span class="bi">\1</span>', formatted_code)
 
-    return code
+    return f'<pre><code>{formatted_code}</code></pre>'
 
-def format_content(text, is_code_card=False):
-    """Format card content."""
+
+def format_content(text):
+    """Format card content, converting code to proper blocks."""
     if not text:
         return text
 
-    # Check if implementation card
-    if '<br>' in text and ('def ' in text or 'class ' in text or 'Complete' in text):
-        is_code_card = True
+    # Check if this is a code implementation card (has <br> and code patterns)
+    if '<br>' in text and ('def ' in text or 'class ' in text or '{{c1::' in text):
+        # This is a code card - convert to proper code block
 
-    if is_code_card:
-        # Convert to code block
+        # Convert <br> to newlines
         code = text.replace('<br>', '\n')
 
-        # Remove "Complete X:" prefix for cleaner display
-        if code.startswith('Complete '):
-            code = re.sub(r'^Complete [^:]+:\s*\n?', '', code)
+        # Check if there's a title prefix like "Complete X:"
+        title_match = re.match(r'^(Complete [^:]+):\s*\n?', code)
+        title = ''
+        if title_match:
+            title = title_match.group(1)
+            code = code[title_match.end():]
 
-        highlighted = highlight_python(code)
-        return f'<div class="code-block">{highlighted}</div>'
+        # Format as code block
+        formatted = format_code_block(code)
+
+        if title:
+            return f'<div style="color:#888;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">{title}</div>{formatted}'
+        return formatted
 
     # Regular text - format inline code and complexity
     text = re.sub(r'`([^`]+)`', r'<code>\1</code>', text)
     text = re.sub(r'\bO\(([^)]+)\)', r'<span class="complexity">O(\1)</span>', text)
 
     return text
+
 
 def format_tag(tag):
     """Format tag for display."""
@@ -348,14 +401,15 @@ def format_tag(tag):
         topic = tag
         subtype = ''
 
-    # Clean up topic name
     topic = topic.replace('_', ' ').title()
-    topic = topic.replace('Dp ', 'DP ')
+    topic = topic.replace('1d', '1D').replace('2d', '2D')
+    topic = re.sub(r'\bDp\b', 'DP', topic)
 
     if subtype:
         subtype = subtype.replace('_', ' ').title()
-        return f"{topic} · {subtype}"
+        return f"{topic} › {subtype}"
     return topic
+
 
 # ============================================================================
 # MAIN
@@ -368,19 +422,19 @@ def main():
     main_deck_name = 'LeetCode DSA'
     all_decks = []
     total_cards = 0
+    global_sort_index = 0
 
     print("=" * 50)
     print("  LeetCode DSA Anki Deck Generator")
-    print("  Clean Flat Design")
+    print("  Grayscale Design with Sort Field")
     print("=" * 50)
     print()
 
-    for topic_file, topic_name in TOPICS:
+    for topic_idx, (topic_file, topic_name) in enumerate(TOPICS):
         filepath = os.path.join(topics_dir, f'{topic_file}.csv')
         if not os.path.exists(filepath):
             continue
 
-        # Create subdeck
         subdeck_name = f"{main_deck_name}::{topic_name}"
         subdeck = genanki.Deck(
             int(hashlib.md5(subdeck_name.encode()).hexdigest()[:12], 16),
@@ -393,35 +447,34 @@ def main():
             reader = csv.DictReader(f)
             cards = list(reader)
 
-        # Sort cards by type for logical learning order
+        # Sort cards by type
         cards.sort(key=get_card_sort_key)
 
-        # Add cards to deck
-        for card in cards:
+        # Add cards with sort index
+        for card_idx, card in enumerate(cards):
             card_type = card.get('Type', 'Basic')
             front = card.get('Front', '')
             back = card.get('Back', '')
             tags = card.get('Tags', topic_file)
 
             display_tag = format_tag(tags)
+            front_fmt = format_content(front)
+            back_fmt = format_content(back) if back else ''
 
-            # Check if code card
-            is_code = ('implementation' in tags.lower() or
-                      ('<br>' in front and ('def ' in front or 'class ' in front)))
-
-            front_fmt = format_content(front, is_code)
+            # Create sort value: topic_index * 10000 + card_index
+            sort_value = str(topic_idx * 10000 + card_idx).zfill(6)
+            global_sort_index += 1
 
             if card_type == 'Cloze':
                 note = genanki.Note(
                     model=cloze_model,
-                    fields=[front_fmt, back, display_tag],
+                    fields=[front_fmt, back_fmt, display_tag, sort_value],
                     tags=[tags.replace('::', '_')]
                 )
             else:
-                back_fmt = format_content(back, False)
                 note = genanki.Note(
                     model=basic_model,
-                    fields=[front_fmt, back_fmt, display_tag],
+                    fields=[front_fmt, back_fmt, display_tag, sort_value],
                     tags=[tags.replace('::', '_')]
                 )
 
@@ -431,7 +484,7 @@ def main():
         all_decks.append(subdeck)
         print(f"  {topic_name}: {len(cards)} cards")
 
-    # Create and save package
+    # Save
     package = genanki.Package(all_decks)
     output_path = os.path.join(script_dir, 'LeetCode_DSA_Deck.apkg')
     package.write_to_file(output_path)
@@ -439,8 +492,8 @@ def main():
     print()
     print(f"✓ Created: {output_path}")
     print(f"✓ Total: {total_cards} cards in {len(all_decks)} subdecks")
+    print(f"✓ Cards have sort field for proper ordering")
     print()
-    print("Import into Anki to start studying!")
 
 if __name__ == '__main__':
     main()
